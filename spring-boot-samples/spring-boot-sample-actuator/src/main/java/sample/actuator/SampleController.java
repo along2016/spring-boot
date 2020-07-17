@@ -45,13 +45,12 @@ public class SampleController {
 	@GetMapping(value = "/", produces = MediaType.APPLICATION_JSON_VALUE)
 	@ResponseBody
 	public Map<String, String> hello() {
-		return Collections.singletonMap("message",
-				this.helloWorldService.getHelloMessage());
+		return Collections.singletonMap("message", this.helloWorldService.getHelloMessage());
 	}
 
 	@PostMapping(value = "/", produces = MediaType.APPLICATION_JSON_VALUE)
 	@ResponseBody
-	public Map<String, Object> olleh(@Validated Message message) {
+	public Map<String, Object> hello(@Validated Message message) {
 		Map<String, Object> model = new LinkedHashMap<>();
 		model.put("message", message.getValue());
 		model.put("title", "Hello Home");
