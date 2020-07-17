@@ -33,8 +33,14 @@ public class Producer implements CommandLineRunner {
 	private Queue queue;
 
 	@Override
-	public void run(String... args) throws Exception {
-		send("Sample message");
+	public void run(String... args) {
+		send("Sample message 1");
+		send("Sample message 2");
+		send("Sample message 3");
+		send("Sample message 4");
+		send("Sample message 5");
+		send("Sample message 6");
+		send("Sample message 7");
 		System.out.println("Message was sent to the Queue");
 	}
 
