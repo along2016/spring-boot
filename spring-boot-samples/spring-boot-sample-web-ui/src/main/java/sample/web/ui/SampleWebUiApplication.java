@@ -31,6 +31,7 @@ public class SampleWebUiApplication {
 
 	@Bean
 	public Converter<String, Message> messageConverter() {
+		// 此处不能替换成 Lambda 表达式，因为 Lambda 表达式无法确定类型
 		return new Converter<String, Message>() {
 			@Override
 			public Message convert(String id) {
