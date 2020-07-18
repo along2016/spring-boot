@@ -62,7 +62,7 @@ public class ManagementPortAndPathSampleActuatorApplicationTests {
 		assertThat(entity.getStatusCode()).isEqualTo(HttpStatus.OK);
 		@SuppressWarnings("unchecked")
 		Map<String, Object> body = entity.getBody();
-		assertThat(body.get("message")).isEqualTo("Hello Phil");
+		assertThat(body.get("message")).isEqualTo("Hello aliang");
 	}
 
 	@Test
