@@ -317,34 +317,49 @@ public class SpringApplication {
 	 * @return a running {@link ApplicationContext}
 	 */
 	public ConfigurableApplicationContext run(String... args) {
+		// 创建并启动计时监控类
 		StopWatch stopWatch = new StopWatch();
 		stopWatch.start();
 		ConfigurableApplicationContext context = null;
 		Collection<SpringBootExceptionReporter> exceptionReporters = new ArrayList<>();
+		// 该方法只做了一件事：设置了一个名为 java.awt.headless 的系统属性，
+		// 其实是想设置该应用程序,即使没有检测到显示器,也允许其启动
 		configureHeadlessProperty();
+		// 加载 SpringApplication 运行时监听器 SpringApplicationRunListeners
 		SpringApplicationRunListeners listeners = getRunListeners(args);
+		// 发布应用启动事件
 		listeners.starting();
 		try {
-			ApplicationArguments applicationArguments = new DefaultApplicationArguments(
-					args);
-			ConfigurableEnvironment environment = prepareEnvironment(listeners,
-					applicationArguments);
+			// 初始化默认应用参数类
+			ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);
+			// 根据运行监听器和应用参数来准备 Spring 环境
+			ConfigurableEnvironment environment = prepareEnvironment(listeners, applicationArguments);
 			configureIgnoreBeanInfo(environment);
+			// 创建 Banner 打印类
 			Banner printedBanner = printBanner(environment);
+			// 创建 SpringApplication 应用上下文对象
 			context = createApplicationContext();
+			// 准备异常报告器（实例化 META-INF/spring.factories 的 SpringBootExceptionReporter 类）
 			exceptionReporters = getSpringFactoriesInstances(
 					SpringBootExceptionReporter.class,
 					new Class[] { ConfigurableApplicationContext.class }, context);
+			// 准备应用上下文
 			prepareContext(context, environment, listeners, applicationArguments,
 					printedBanner);
+			// 刷新应用上下文
 			refreshContext(context);
+			// 应用上下文刷新后置处理
 			afterRefresh(context, applicationArguments);
+			// 停止计时监控类
 			stopWatch.stop();
 			if (this.logStartupInfo) {
+				// 输出日志记录执行主类名、时间信息
 				new StartupInfoLogger(this.mainApplicationClass)
 						.logStarted(getApplicationLog(), stopWatch);
 			}
+			// 发布应用上下文启动完成事件
 			listeners.started(context);
+			// 执行所有 Runner 运行器
 			callRunners(context, applicationArguments);
 		}
 		catch (Throwable ex) {
@@ -353,12 +368,14 @@ public class SpringApplication {
 		}
 
 		try {
+			// 发布应用上下文就绪事件
 			listeners.running(context);
 		}
 		catch (Throwable ex) {
 			handleRunFailure(context, ex, exceptionReporters, null);
 			throw new IllegalStateException(ex);
 		}
+		// 返回应用上下文
 		return context;
 	}
 
@@ -366,14 +383,20 @@ public class SpringApplication {
 			SpringApplicationRunListeners listeners,
 			ApplicationArguments applicationArguments) {
 		// Create and configure the environment
+		// 创建和配置环境
 		ConfigurableEnvironment environment = getOrCreateEnvironment();
+		// 配置环境：配置 PropertySources 和 activeProfiles
 		configureEnvironment(environment, applicationArguments.getSourceArgs());
+		// listeners 环境准备（就是广播 ApplicationEnvironmentPreparedEvent 事件）
 		listeners.environmentPrepared(environment);
+		// 将环境绑定到 SpringApplication
 		bindToSpringApplication(environment);
+		// 如果是非 web 环境，将环境转换成 StandardEnvironment
 		if (!this.isCustomEnvironment) {
 			environment = new EnvironmentConverter(getClassLoader())
 					.convertEnvironmentIfNecessary(environment, deduceEnvironmentClass());
 		}
+		// 配置 PropertySources 对它自己的递归依赖
 		ConfigurationPropertySources.attach(environment);
 		return environment;
 	}
@@ -448,8 +471,10 @@ public class SpringApplication {
 			Class<?>[] parameterTypes, Object... args) {
 		ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
 		// Use names and ensure unique to protect against duplicates
+		// 从 META-INF/spring.factories 中获取需要实例化的类的名称
 		Set<String> names = new LinkedHashSet<>(
 				SpringFactoriesLoader.loadFactoryNames(type, classLoader));
+		// 实例化 META-INF/spring.factories 中类的对象
 		List<T> instances = createSpringFactoriesInstances(type, parameterTypes,
 				classLoader, args, names);
 		AnnotationAwareOrderComparator.sort(instances);
@@ -479,15 +504,18 @@ public class SpringApplication {
 	}
 
 	private ConfigurableEnvironment getOrCreateEnvironment() {
+		// 存在则直接返回
 		if (this.environment != null) {
 			return this.environment;
 		}
 		switch (this.webApplicationType) {
 		case SERVLET:
+			// 标准的 Servlet 环境，也就是我们说的 web 环境
 			return new StandardServletEnvironment();
 		case REACTIVE:
 			return new StandardReactiveWebEnvironment();
 		default:
+			// 标准环境，非 web 环境
 			return new StandardEnvironment();
 		}
 	}
@@ -509,7 +537,9 @@ public class SpringApplication {
 			environment.setConversionService(
 					ApplicationConversionService.getSharedInstance());
 		}
+		// 配置 PropertySources
 		configurePropertySources(environment, args);
+		// 配置 Profiles
 		configureProfiles(environment, args);
 	}
 
@@ -523,10 +553,14 @@ public class SpringApplication {
 	protected void configurePropertySources(ConfigurableEnvironment environment,
 			String[] args) {
 		MutablePropertySources sources = environment.getPropertySources();
+		// 此时 defaultProperties 还是 null，可能后续过程会初始化
 		if (this.defaultProperties != null && !this.defaultProperties.isEmpty()) {
+			// 存在的话将其放到最后位置
 			sources.addLast(
 					new MapPropertySource("defaultProperties", this.defaultProperties));
 		}
+		// 存在命令行参数，则解析它并封装进 SimpleCommandLinePropertySource 对象，
+		// 同时将此对象放到 sources 的第一位置（优先级最高）
 		if (this.addCommandLineProperties && args.length > 0) {
 			String name = CommandLinePropertySource.COMMAND_LINE_PROPERTY_SOURCE_NAME;
 			if (sources.contains(name)) {
@@ -538,6 +572,7 @@ public class SpringApplication {
 				sources.replace(name, composite);
 			}
 			else {
+				// 将其放到第一位置
 				sources.addFirst(new SimpleCommandLinePropertySource(args));
 			}
 		}
@@ -553,8 +588,11 @@ public class SpringApplication {
 	 * @see org.springframework.boot.context.config.ConfigFileApplicationListener
 	 */
 	protected void configureProfiles(ConfigurableEnvironment environment, String[] args) {
+		// 保证 environment 的 activeProfiles 属性被初始化了。从 PropertySources 中查找 spring.profiles.active 属性，
+		// 存在则将其值添加 activeProfiles 集合中。
 		environment.getActiveProfiles(); // ensure they are initialized
 		// But these ones should go first (last wins in a property key clash)
+		// 如果存在其他的 Profiles，则将这些 Profiles 放到第一的位置。
 		Set<String> profiles = new LinkedHashSet<>(this.additionalProfiles);
 		profiles.addAll(Arrays.asList(environment.getActiveProfiles()));
 		environment.setActiveProfiles(StringUtils.toStringArray(profiles));
